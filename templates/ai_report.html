@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Bug Bounty Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+            padding: 20px;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: #1e293b;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        .nav-links { display: flex; gap: 12px; }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-blue  { background: #38bdf8; color: black; }
+        .btn-green { background: #22c55e; color: black; }
+        .btn-red   { background: #ef4444; color: white; }
+        .btn-purple{ background: #8b5cf6; color: white; }
+
+        /* ── HEADER CARD ── */
+        .report-header {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid rgba(56,189,248,0.2);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .report-header h1 {
+            font-size: 28px;
+            color: #38bdf8;
+            margin-bottom: 8px;
+        }
+
+        .report-header p {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-top: 16px;
+        }
+
+        .stat-item h3 {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .stat-item p {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        /* ── REPORT CONTENT ── */
+        .report-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+
+        .report-card h2 {
+            color: #38bdf8;
+            font-size: 18px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #334155;
+        }
+
+        .report-content {
+            font-size: 14px;
+            line-height: 1.8;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            font-family: Arial, sans-serif;
+        }
+
+        /* ── LOADING ── */
+        .loading-box {
+            text-align: center;
+            padding: 60px;
+        }
+
+        .loader {
+            border: 4px solid #1e293b;
+            border-top: 4px solid #38bdf8;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ── COPY BUTTON ── */
+        .copy-btn {
+            float: right;
+            padding: 6px 14px;
+            background: #334155;
+            color: #94a3b8;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #38bdf8;
+            color: black;
+        }
+
+        /* ── VULN CARDS ── */
+        .vuln-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .vuln-mini-card {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 12px;
+            border-left: 3px solid #ef4444;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .vuln-mini-card:hover {
+            border-color: #38bdf8;
+            transform: translateY(-2px);
+        }
+
+        .vuln-mini-card.CRITICAL { border-left-color: #7f1d1d; }
+        .vuln-mini-card.HIGH     { border-left-color: #ef4444; }
+        .vuln-mini-card.MEDIUM   { border-left-color: #facc15; }
+        .vuln-mini-card.LOW      { border-left-color: #22c55e; }
+
+        /* ── H1 MODAL ── */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-box {
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 28px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: #334155;
+            border: none;
+            color: white;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .modal-content {
+            font-size: 13px;
+            line-height: 1.8;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <div class="navbar">
+        <div class="logo">🛡️ AI Bug Bounty Report</div>
+        <div class="nav-links">
+            <a href="/dashboard" class="btn btn-blue">📊 Dashboard</a>
+            <a href="/history" class="btn btn-purple">📜 History</a>
+            <a href="/logout" class="btn btn-red">🚪 Logout</a>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="report-header">
+        <h1>🤖 AI-Generated Bug Bounty Report</h1>
+        <p>Generated for: <b style="color:white;">{{ target }}</b></p>
+
+        <div class="stats-row">
+            <div class="stat-item">
+                <h3 style="color:#38bdf8;">{{ total }}</h3>
+                <p>Vulnerabilities</p>
+            </div>
+            <div class="stat-item">
+                <h3 style="color:{{ '#ef4444' if score > 40 else '#22c55e' }};">
+                    {{ score }}/100
+                </h3>
+                <p>Risk Score</p>
+            </div>
+            <div class="stat-item">
+                <h3 style="color:#facc15;">{{ label }}</h3>
+                <p>Risk Level</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN REPORT -->
+    <div class="report-card">
+        <h2>
+            📋 Full Security Report
+            <button class="copy-btn" onclick="copyReport()">
+                📋 Copy Report
+            </button>
+        </h2>
+
+        {% if report %}
+            <div class="report-content" id="reportContent">{{ report }}</div>
+        {% else %}
+            <div class="loading-box">
+                <div class="loader"></div>
+                <p style="color:#64748b;">Generating AI report...</p>
+                <p style="color:#475569;font-size:12px;margin-top:8px;">
+                    This may take 10-20 seconds
+                </p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- INDIVIDUAL H1 REPORTS -->
+    {% if total > 0 %}
+    <div class="report-card">
+        <h2>🎯 Individual HackerOne Reports</h2>
+        <p style="color:#64748b;font-size:13px;margin-bottom:16px;">
+            Click any vulnerability to generate a HackerOne-ready submission
+        </p>
+
+        <div class="vuln-grid" id="vulnGrid">
+            <!-- Loaded via JS -->
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- H1 MODAL -->
+    <div class="modal" id="h1Modal">
+        <div class="modal-box">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <h3 style="color:#38bdf8;margin-bottom:16px;">
+                🎯 HackerOne Report
+            </h3>
+            <div id="modalLoader" style="text-align:center;padding:20px;">
+                <div class="loader"></div>
+                <p style="color:#64748b;margin-top:8px;">Generating report...</p>
+            </div>
+            <div class="modal-content" id="modalContent"
+                 style="display:none;"></div>
+            <button onclick="copyH1Report()"
+                style="margin-top:16px;padding:8px 20px;background:#22c55e;
+                       color:black;border:none;border-radius:8px;
+                       cursor:pointer;font-weight:bold;width:100%;">
+                📋 Copy HackerOne Report
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ✅ Load vuln cards
+        async function loadVulns() {
+            try {
+                const res = await fetch('/live_data');
+                const data = await res.json();
+                const grid = document.getElementById("vulnGrid");
+
+                if (!grid) return;
+
+                let html = "";
+                data.vulnerabilities.forEach((v, index) => {
+                    const sev = v.severity || "MEDIUM";
+                    html += `
+                    <div class="vuln-mini-card ${sev}"
+                         onclick="generateH1Report(${index}, '${v.type}')">
+                        <div style="font-size:13px;font-weight:bold;
+                                    margin-bottom:4px;">${v.type}</div>
+                        <div style="font-size:11px;color:#64748b;
+                                    margin-bottom:6px;">${v.url.substring(0, 50)}...</div>
+                        <span style="font-size:11px;padding:2px 8px;
+                                     border-radius:8px;font-weight:bold;
+                                     background:${sev === 'CRITICAL' ? '#7f1d1d' :
+                                                 sev === 'HIGH' ? '#450a0a' :
+                                                 sev === 'MEDIUM' ? '#422006' : '#052e16'};
+                                     color:${sev === 'CRITICAL' ? '#fca5a5' :
+                                            sev === 'HIGH' ? '#ef4444' :
+                                            sev === 'MEDIUM' ? '#facc15' : '#22c55e'};">
+                            ${sev}
+                        </span>
+                        <span style="font-size:11px;color:#38bdf8;
+                                     float:right;margin-top:2px;">
+                            Click for H1 Report →
+                        </span>
+                    </div>`;
+                });
+
+                grid.innerHTML = html ||
+                    '<p style="color:#64748b;">No vulnerabilities found</p>';
+
+            } catch (e) {
+                console.log("Error loading vulns:", e);
+            }
+        }
+
+        // ✅ Generate HackerOne report
+        async function generateH1Report(index, vulnType) {
+            document.getElementById("h1Modal").classList.add("active");
+            document.getElementById("modalLoader").style.display = "block";
+            document.getElementById("modalContent").style.display = "none";
+
+            try {
+                const res = await fetch(`/hackerone_report/${index}`);
+                const data = await res.json();
+
+                document.getElementById("modalLoader").style.display = "none";
+                document.getElementById("modalContent").style.display = "block";
+                document.getElementById("modalContent").innerText =
+                    data.report || "Failed to generate report";
+
+            } catch (e) {
+                document.getElementById("modalLoader").style.display = "none";
+                document.getElementById("modalContent").style.display = "block";
+                document.getElementById("modalContent").innerText =
+                    "Error generating report: " + e;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById("h1Modal").classList.remove("active");
+        }
+
+        // ✅ Copy full report
+        function copyReport() {
+            const content = document.getElementById("reportContent");
+            if (content) {
+                navigator.clipboard.writeText(content.innerText);
+                alert("✅ Report copied to clipboard!");
+            }
+        }
+
+        // ✅ Copy H1 report
+        function copyH1Report() {
+            const content = document.getElementById("modalContent");
+            if (content) {
+                navigator.clipboard.writeText(content.innerText);
+                alert("✅ HackerOne report copied!");
+            }
+        }
+
+        // ✅ Close modal on background click
+        document.getElementById("h1Modal").addEventListener("click", function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        loadVulns();
+    </script>
+
+</body>
+</html>

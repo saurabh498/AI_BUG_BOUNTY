@@ -20,7 +20,7 @@ def update_scan_stats(target=None, urls=None, parameters=None):
         scan_stats["parameters"] = parameters
 
 def report_vulnerability(vtype, url, parameter="", payload="",
-                         severity="MEDIUM", score=5.0):
+                         severity="MEDIUM", score=5.0, poc=None):
     from modules.exploit_suggester import get_suggestions
 
     vuln = {
@@ -30,18 +30,16 @@ def report_vulnerability(vtype, url, parameter="", payload="",
         "payload": payload,
         "severity": severity,
         "score": score,
-        # ✅ Store suggestions with each vuln
-        "suggestions": get_suggestions(vtype)
+        "suggestions": get_suggestions(vtype),
+        "poc": poc  # ✅ Store PoC
     }
 
-    if vuln in vulnerabilities:
-        return
-
-    # ✅ Remove suggestions before dedup check
-    # (suggestions dict would break equality check)
-    vuln_check = {k: v for k, v in vuln.items() if k != "suggestions"}
+    # dedup check without poc and suggestions
+    vuln_check = {k: v for k, v in vuln.items()
+                  if k not in ["suggestions", "poc"]}
     for v in vulnerabilities:
-        v_check = {k: val for k, val in v.items() if k != "suggestions"}
+        v_check = {k: val for k, val in v.items()
+                   if k not in ["suggestions", "poc"]}
         if v_check == vuln_check:
             return
 

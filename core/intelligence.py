@@ -2,6 +2,8 @@
 
 from core.report import report_vulnerability
 from modules.exploit_suggester import format_suggestions
+from modules.poc_generator import generate_poc, format_poc_terminal
+
 
 def classify_vulnerability(vuln_type):
     severity_map = {
@@ -12,7 +14,7 @@ def classify_vulnerability(vuln_type):
         "Login Bypass (SQLi)": ("CRITICAL", 9.5),
         "Open Redirect": ("MEDIUM", 5.0),
         "Sensitive File Exposure": ("HIGH", 7.5),
-        "Weak Credentials": ("CRITICAL", 9.0),  # ✅ NEW
+        "Weak Credentials": ("CRITICAL", 9.0),
         "Missing Header: Content-Security-Policy":   ("HIGH", 7.5),
         "Missing Header: Strict-Transport-Security": ("MEDIUM", 5.0),
         "Missing Header: X-Frame-Options":           ("MEDIUM", 4.5),
@@ -39,9 +41,11 @@ def handle_vulnerability(vuln_type, url, parameter=None, payload=None):
         print("Payload   :", payload)
     print("==============================\n")
 
-    # ✅ Print exploit suggestions for HIGH and CRITICAL only
-    # (avoid spamming terminal for LOW/MEDIUM header findings)
+    # ✅ Generate PoC for CRITICAL and HIGH only
+    poc = None
     if severity in ["CRITICAL", "HIGH"]:
+        poc = generate_poc(vuln_type, url, parameter, payload)
+        print(format_poc_terminal(poc))
         print(format_suggestions(vuln_type, url, payload))
 
     report_vulnerability(
@@ -50,5 +54,6 @@ def handle_vulnerability(vuln_type, url, parameter=None, payload=None):
         parameter or "",
         payload or "",
         severity,
-        score
+        score,
+        poc=poc
     )

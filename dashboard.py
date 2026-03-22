@@ -19,6 +19,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from auth.database import init_db, get_user_by_username, create_user
 from auth.models import User
 from auth.database import init_db, get_user_by_username, get_user_by_email, create_user, update_password
+from modules.report_writer import generate_ai_report, generate_hackerone_report
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -600,6 +603,43 @@ def download_history_report(scan_id):
     filename = f"report_{scan['target'].replace('http://','').replace('https://','').replace('/','_')}.pdf"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
 
+@app.route("/ai_report")
+@login_required
+def ai_report():
+    from core.storage import get_risk_score
+    score, label, color = get_risk_score()
+
+    report = generate_ai_report(
+        vulnerabilities=list(vulnerabilities),
+        target=scan_stats["target"],
+        risk_score=score,
+        risk_label=label
+    )
+
+    return render_template(
+        "ai_report.html",
+        report=report,
+        target=scan_stats["target"],
+        total=len(vulnerabilities),
+        score=score,
+        label=label
+    )
+
+
+@app.route("/hackerone_report/<int:vuln_index>")
+@login_required
+def hackerone_report(vuln_index):
+    try:
+        vuln = list(vulnerabilities)[vuln_index]
+    except IndexError:
+        return jsonify({"error": "Vulnerability not found"}), 404
+
+    report = generate_hackerone_report(
+        vuln=vuln,
+        target=scan_stats["target"]
+    )
+
+    return jsonify({"report": report})
 
 @app.route('/favicon.ico')
 def favicon():
@@ -613,4 +653,4 @@ def catch_all(anything):
 
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=False, host="0.0.0.0", port=5000)
