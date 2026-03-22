@@ -570,10 +570,8 @@
 
                 updateStatus(data.status);
 
-                // ✅ ADD THIS — check for new vulns and show toasts
                 checkNewVulns(data.vulnerabilities || []);
 
-                // ✅ ADD THIS — reset badge when completed
                 if (data.status === "completed" || data.status === "idle") {
                     resetAlertBadge();
                 }
@@ -583,7 +581,6 @@
                 document.getElementById("medium").innerText = data.medium;
                 document.getElementById("low").innerText = data.low;
 
-                // ✅ Risk Score update
                 document.getElementById("riskScore").innerText = data.risk_score;
                 document.getElementById("riskScore").style.color = data.risk_color;
                 document.getElementById("riskLabel").innerText = data.risk_label;
@@ -591,20 +588,111 @@
                 document.getElementById("riskBar").style.width = data.risk_score + "%";
                 document.getElementById("riskBar").style.background = data.risk_color;
 
-                // ✅ Progress bar
                 document.getElementById("progressBar").style.width = (data.progress || 0) + "%";
                 document.getElementById("phaseText").innerText =
                     (data.phase || "Initializing") + " (" + (data.progress || 0) + "%)";
 
-                // ✅ All values escaped before injecting into DOM
+                // ✅ Render vulns with suggestions
                 let html = "";
                 data.vulnerabilities.forEach(v => {
+                    const sev = v.severity || "MEDIUM";
+                    const sevColors = {
+                        "CRITICAL": "#7f1d1d",
+                        "HIGH": "#ef4444",
+                        "MEDIUM": "#facc15",
+                        "LOW": "#22c55e"
+                    };
+                    const sevColor = sevColors[sev] || "#38bdf8";
+
+                    let suggestionsHtml = "";
+                    if (v.suggestions) {
+                        const s = v.suggestions;
+
+                        let stepsHtml = "";
+                        if (s.next_steps && s.next_steps.length) {
+                            stepsHtml = s.next_steps.slice(0, 3).map(step =>
+                                `<li style="margin:4px 0;color:#94a3b8;font-size:12px;">
+                            ${escapeHtml(step)}
+                        </li>`
+                            ).join("");
+                        }
+
+                        let toolsHtml = "";
+                        if (s.tools && s.tools.length) {
+                            toolsHtml = s.tools.slice(0, 2).map(tool =>
+                                `<div style="
+                            background:#0f172a;
+                            padding:4px 8px;
+                            border-radius:4px;
+                            font-family:monospace;
+                            font-size:11px;
+                            color:#38bdf8;
+                            margin:3px 0;">
+                            ${escapeHtml(tool.replace('<URL>', v.url))}
+                        </div>`
+                            ).join("");
+                        }
+
+                        suggestionsHtml = `
+                    <details style="margin-top:10px;">
+                        <summary style="
+                            cursor:pointer;
+                            color:#38bdf8;
+                            font-size:13px;
+                            font-weight:bold;
+                            list-style:none;
+                            padding:6px 0;">
+                            🎯 Exploit Suggestions
+                        </summary>
+                        <div style="margin-top:8px;padding:10px;
+                                    background:#0f172a;border-radius:8px;">
+                            <div style="font-size:12px;color:#ef4444;margin-bottom:6px;">
+                                💥 <b>Impact:</b> ${escapeHtml(s.impact || "")}
+                            </div>
+                            ${stepsHtml ? `
+                            <div style="font-size:12px;color:#94a3b8;margin-bottom:6px;">
+                                📋 <b style="color:white;">Next Steps:</b>
+                                <ul style="margin:4px 0 0 16px;padding:0;">
+                                    ${stepsHtml}
+                                </ul>
+                            </div>` : ""}
+                            ${toolsHtml ? `
+                            <div style="font-size:12px;margin-top:6px;">
+                                🛠️ <b style="color:white;">Tools:</b>
+                                ${toolsHtml}
+                            </div>` : ""}
+                        </div>
+                    </details>`;
+                    }
+
                     html += `
-                    <div class="card">
-                        <b>${escapeHtml(v.type)}</b> | ${escapeHtml(v.severity)}<br>
-                        ${escapeHtml(v.url)}<br>
-                        Payload: ${escapeHtml(v.payload)}
-                    </div>`;
+            <div class="card" style="border-left:3px solid ${sevColor};">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <b style="font-size:15px;">${escapeHtml(v.type)}</b>
+                    <span style="
+                        background:${sevColor};
+                        color:${sev === 'MEDIUM' ? 'black' : 'white'};
+                        padding:2px 10px;
+                        border-radius:12px;
+                        font-size:12px;
+                        font-weight:bold;">
+                        ${escapeHtml(sev)}
+                    </span>
+                </div>
+                <div style="font-size:12px;color:#64748b;margin:6px 0;">
+                    🌐 ${escapeHtml(v.url)}
+                </div>
+                <div style="font-size:12px;color:#94a3b8;">
+                    Payload: <code style="
+                        background:#0f172a;
+                        padding:2px 6px;
+                        border-radius:4px;
+                        font-size:11px;">
+                        ${escapeHtml(String(v.payload))}
+                    </code>
+                </div>
+                ${suggestionsHtml}
+            </div>`;
                 });
 
                 document.getElementById("vuln-list").innerHTML = html;

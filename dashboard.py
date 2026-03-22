@@ -286,10 +286,18 @@ def build_pdf(target, timestamp, score, label, color, vulns):
             "UNKNOWN":  "#64748b",
         }
 
-        vuln_data = [["Type", "Severity", "URL", "Payload"]]
+        # ✅ 5-column table with Next Step
+        vuln_data = [["Type", "Severity", "URL", "Payload", "Next Step"]]
+
         for v in vulns:
-            sev = v["severity"].upper()
+            sev = v.get("severity", "").upper()
             sev_color = severity_colors.get(sev, "#64748b")
+
+            # ✅ Get first next step
+            suggestions = v.get("suggestions", {})
+            next_steps = suggestions.get("next_steps", [])
+            first_step = next_steps[0] if next_steps else "Investigate manually"
+
             vuln_data.append([
                 Paragraph(safe_pdf_text(v["type"], 30), ParagraphStyle(
                     "vt", parent=styles["Normal"],
@@ -299,17 +307,25 @@ def build_pdf(target, timestamp, score, label, color, vulns):
                     "vs", parent=styles["Normal"],
                     fontSize=9, textColor=colors.HexColor(sev_color)
                 )),
-                Paragraph(safe_pdf_text(v["url"], 60), ParagraphStyle(
+                Paragraph(safe_pdf_text(v["url"], 50), ParagraphStyle(
                     "vu", parent=styles["Normal"],
                     fontSize=8, textColor=colors.HexColor("#1e293b")
                 )),
-                Paragraph(safe_pdf_text(v["payload"], 40), ParagraphStyle(
+                Paragraph(safe_pdf_text(v["payload"], 30), ParagraphStyle(
                     "vp", parent=styles["Normal"],
                     fontSize=8, textColor=colors.HexColor("#475569")
                 )),
+                Paragraph(safe_pdf_text(first_step, 50), ParagraphStyle(
+                    "vns", parent=styles["Normal"],
+                    fontSize=8, textColor=colors.HexColor("#0ea5e9")
+                )),
             ])
 
-        vuln_table = Table(vuln_data, colWidths=[1.3*inch, 0.9*inch, 2.8*inch, 1.5*inch])
+        # ✅ 5-column widths
+        vuln_table = Table(
+            vuln_data,
+            colWidths=[1.1*inch, 0.8*inch, 1.8*inch, 1.3*inch, 1.5*inch]
+        )
         vuln_table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0ea5e9")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -325,6 +341,7 @@ def build_pdf(target, timestamp, score, label, color, vulns):
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]))
         elements.append(vuln_table)
+
     else:
         elements.append(Paragraph("No vulnerabilities found.", styles["Normal"]))
 
