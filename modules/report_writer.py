@@ -3,13 +3,17 @@
 import json
 import requests
 import os
+from dotenv import load_dotenv
 
-# ✅ Load Groq API key
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+# ✅ Load .env here too — don't rely on dashboard.py
+load_dotenv()
 
 
 def call_ai(prompt, max_tokens=4000):
     """Call Groq API — completely free"""
+
+    # ✅ Read key fresh every call — not at module load time
+    GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 
     if not GROQ_API_KEY:
         return "❌ Error: GROQ_API_KEY not set in .env file"
@@ -22,7 +26,7 @@ def call_ai(prompt, max_tokens=4000):
                 "Content-Type": "application/json"
             },
             json={
-                "model": "llama3-8b-8192",
+                "model": "llama-3.3-70b-versatile",
                 "messages": [
                     {
                         "role": "system",
