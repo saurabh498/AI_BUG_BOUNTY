@@ -12,6 +12,7 @@ def classify_vulnerability(vuln_type):
         "Login Bypass (SQLi)": ("CRITICAL", 9.5),
         "Open Redirect": ("MEDIUM", 5.0),
         "Sensitive File Exposure": ("HIGH", 7.5),
+        "Weak Credentials": ("CRITICAL", 9.0),  # ✅ NEW
         "Missing Header: Content-Security-Policy":   ("HIGH", 7.5),
         "Missing Header: Strict-Transport-Security": ("MEDIUM", 5.0),
         "Missing Header: X-Frame-Options":           ("MEDIUM", 4.5),

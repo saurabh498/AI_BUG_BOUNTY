@@ -15,10 +15,11 @@ from core.storage import set_progress, set_status
 from core.validator import validate_target
 from modules.open_redirect import scan_open_redirect
 from modules.js_scanner import scan_js_endpoints
+from modules.auth_scanner import scan_default_credentials
 import sys
 
 
-def start_scan(target, user_id=None, config=None, threads=10):
+def start_scan(target, user_id=None, config=None, threads=5):
 
     # ✅ Default config — all modules on
     if config is None:
@@ -30,7 +31,8 @@ def start_scan(target, user_id=None, config=None, threads=10):
             "redirect":  True,
             "fuzzer":    True,
             "login":     True,
-            "dirs":      True
+            "dirs":      True,
+             "auth":      True,   # ✅ NEW
         }
 
     print("\n🚀 AI Bug Bounty Scanner Starting\n")
@@ -127,6 +129,12 @@ def start_scan(target, user_id=None, config=None, threads=10):
         set_progress(91, "🔐 Login bypass testing")
         print("\n[11] Login Scan")
         run_multithreaded_scan(urls, scan_login, threads=threads // 2)
+
+     # ── DEFAULT CREDENTIALS ── ✅ NEW
+    if config.get("auth"):
+        set_progress(94, "🔑 Testing default credentials")
+        print("\n[12] Default Credentials Scan")
+        run_multithreaded_scan(urls, scan_default_credentials, threads=3)    
 
     # ── 1️⃣3️⃣ REPORT ──
     set_progress(97, "📄 Generating report")

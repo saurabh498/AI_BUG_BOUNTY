@@ -523,6 +523,7 @@ def start_configured_scan():
         "fuzzer":    "module_fuzzer"    in request.form,
         "login":     "module_login"     in request.form,
         "dirs":      "module_dirs"      in request.form,
+        "auth":      "module_auth"      in request.form,  # ✅ NEW
     }
 
     clear_vulns()
