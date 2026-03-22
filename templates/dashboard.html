@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>🔥 AI Scanner Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 15px;
+            margin: 10px auto;
+            border-radius: 10px;
+            width: 80%;
+            text-align: left;
+        }
+
+        #chart-container {
+            width: 250px;
+            height: 250px;
+            margin: auto;
+        }
+
+        .loader {
+            border: 6px solid #1e293b;
+            border-top: 6px solid #38bdf8;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .status {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        .running {
+            color: #38bdf8;
+        }
+
+        .completed {
+            color: #22c55e;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        /* ── TOAST NOTIFICATIONS ── */
+        #toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 360px;
+        }
+
+        .toast {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            animation: slideIn 0.3s ease forwards;
+            border-left: 4px solid #38bdf8;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        .toast:hover {
+            opacity: 0.85;
+        }
+
+        .toast.CRITICAL {
+            border-left-color: #7f1d1d;
+        }
+
+        .toast.HIGH {
+            border-left-color: #ef4444;
+        }
+
+        .toast.MEDIUM {
+            border-left-color: #facc15;
+        }
+
+        .toast.LOW {
+            border-left-color: #22c55e;
+        }
+
+        .toast-icon {
+            font-size: 22px;
+            margin-top: 2px;
+        }
+
+        .toast-body {
+            flex: 1;
+        }
+
+        .toast-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 3px;
+        }
+
+        .toast-url {
+            font-size: 11px;
+            color: #94a3b8;
+            word-break: break-all;
+            margin-bottom: 4px;
+        }
+
+        .toast-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .toast-severity {
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .toast-severity.CRITICAL {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+
+        .toast-severity.HIGH {
+            background: #450a0a;
+            color: #ef4444;
+        }
+
+        .toast-severity.MEDIUM {
+            background: #422006;
+            color: #facc15;
+        }
+
+        .toast-severity.LOW {
+            background: #052e16;
+            color: #22c55e;
+        }
+
+        .toast-time {
+            font-size: 10px;
+            color: #475569;
+        }
+
+        .toast-close {
+            font-size: 16px;
+            color: #475569;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 4px;
+        }
+
+        .toast-close:hover {
+            color: white;
+        }
+
+        .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 0 0 0 12px;
+            animation: progress 4s linear forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+        }
+
+        @keyframes progress {
+            from {
+                width: 100%;
+            }
+
+            to {
+                width: 0%;
+            }
+        }
+
+        /* ── SCAN SOUND INDICATOR ── */
+        .alert-badge {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9998;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            font-size: 11px;
+            font-weight: bold;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: pulse-badge 1s infinite;
+        }
+
+        @keyframes pulse-badge {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🔥 AI Bug Bounty Scanner</h1>
+
+    <a href="/history">
+        <button style="
+            background:#38bdf8;
+            color:black;
+            border:none;
+            padding:10px 15px;
+            border-radius:8px;
+            margin-top:10px;
+            cursor:pointer;">
+            📜 View Scan History
+        </button>
+    </a>
+
+    <a href="/download_report">
+        <button style="
+            background:#22c55e;
+            color:black;
+            border:none;
+            padding:10px 15px;
+            border-radius:8px;
+            margin-top:10px;
+            margin-left:10px;
+            cursor:pointer;">
+            📄 Download PDF Report
+        </button>
+    </a>
+
+    <a href="/download_json">
+        <button style="
+            background:#8b5cf6;
+            color:white;
+            border:none;
+            padding:10px 15px;
+            border-radius:8px;
+            margin-top:10px;
+            margin-left:10px;
+            cursor:pointer;">
+            📦 Download JSON
+        </button>
+    </a>
+
+    <a href="/logout">
+        <button style="
+            background:#ef4444;
+            color:white;
+            border:none;
+            padding:10px 15px;
+            border-radius:8px;
+            margin-top:10px;
+            margin-left:10px;
+            cursor:pointer;">
+            🚪 Logout
+        </button>
+    </a>
+
+    <!-- STATUS -->
+    <div id="statusBox">
+        <div class="loader" id="loader"></div>
+        <div class="status" id="statusText">Starting scan...</div>
+    </div>
+
+    <!-- PROGRESS BAR -->
+    <div style="width:80%;margin:auto;margin-top:20px;">
+        <div style="background:#1e293b;border-radius:10px;overflow:hidden;">
+            <div id="progressBar" style="
+                height:20px;
+                width:0%;
+                background:#38bdf8;
+                transition:0.3s;">
+            </div>
+        </div>
+        <p id="phaseText">Initializing...</p>
+    </div>
+
+    <!-- STATS -->
+    <div class="card">
+        <h3>Total: <span id="total">0</span></h3>
+        <h3>High: <span id="high">0</span></h3>
+        <h3>Medium: <span id="medium">0</span></h3>
+        <h3>Low: <span id="low">0</span></h3>
+    </div>
+
+    <!-- RISK SCORE -->
+    <div class="card" id="riskCard" style="text-align:center;">
+        <h2>🎯 Overall Risk Score</h2>
+        <div style="
+        font-size: 60px;
+        font-weight: bold;
+        transition: color 0.3s;" id="riskScore">0
+        </div>
+        <div style="font-size:16px;margin-top:5px;">/ 100</div>
+
+        <!-- Score bar -->
+        <div style="
+        background:#0f172a;
+        border-radius:10px;
+        overflow:hidden;
+        margin:15px auto;
+        width:80%;
+        height:20px;">
+            <div id="riskBar" style="
+            height:20px;
+            width:0%;
+            background:#22c55e;
+            transition: width 0.5s, background 0.5s;">
+            </div>
+        </div>
+
+        <div id="riskLabel" style="
+        font-size: 20px;
+        font-weight: bold;
+        letter-spacing: 1px;">
+            LOW RISK
+        </div>
+    </div>
+
+    <!-- CHART -->
+    <div id="chart-container">
+        <canvas id="chart"></canvas>
+    </div>
+
+    <!-- VULNS -->
+    <h2>🚨 Live Vulnerabilities</h2>
+    <div id="vuln-list"></div>
+
+    <!-- ── TOAST CONTAINER ── -->
+    <div id="toast-container"></div>
+    <div class="alert-badge" id="alertBadge">0</div>
+
+    <script>
+        let chart = null;
+        const ctx = document.getElementById('chart').getContext('2d');
+
+
+        function initChart(high, medium, low) {
+            chart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['High', 'Medium', 'Low'],
+                    datasets: [{
+                        data: [high, medium, low],
+                        backgroundColor: ['#ef4444', '#facc15', '#22c55e']
+                    }]
+                }
+            });
+        }
+
+        function updateChart(high, medium, low) {
+            if (!chart) return;
+            chart.data.datasets[0].data = [high, medium, low];
+            chart.update();
+        }
+
+        function updateStatus(status) {
+            const text = document.getElementById("statusText");
+            const loader = document.getElementById("loader");
+
+            if (status === "starting") {
+                text.innerText = "🚀 Starting scan...";
+                // ✅ Reset seen vulns for new scan
+                seenVulns.clear();
+                newVulnCount = 0;
+                updateAlertBadge(0);
+            } else if (status === "running") {
+                text.innerText = "🔍 Scanning in progress...";
+                text.className = "status running";
+            } else if (status === "completed") {
+                text.innerText = "✅ Scan Completed!";
+                text.className = "status completed";
+                loader.style.display = "none";
+            } else if (status === "error") {
+                text.innerText = "❌ Scan Error!";
+                text.className = "status error";
+                loader.style.display = "none";
+            }
+        }
+
+        // ✅ Must be above fetchData()
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // ── TOAST SYSTEM ──
+        let seenVulns = new Set();
+        let newVulnCount = 0;
+
+        const toastIcons = {
+            "SQL Injection": "💉",
+            "XSS": "⚡",
+            "Open Redirect": "↪️",
+            "Sensitive File Exposure": "🗂️",
+            "Directory Exposure": "📁",
+            "Login Bypass (SQLi)": "🔐",
+            "Information Disclosure": "ℹ️",
+        };
+
+        const severityIcon = {
+            "CRITICAL": "🚨",
+            "HIGH": "🔴",
+            "MEDIUM": "🟡",
+            "LOW": "🟢"
+        };
+
+        function getToastIcon(type) {
+            for (const key in toastIcons) {
+                if (type.includes(key)) return toastIcons[key];
+            }
+            return "⚠️";
+        }
+
+        function timeAgo() {
+            return "just now";
+        }
+
+        function showToast(vuln) {
+            const container = document.getElementById("toast-container");
+            const sev = vuln.severity || "MEDIUM";
+            const icon = getToastIcon(vuln.type);
+            const sevIcon = severityIcon[sev] || "⚠️";
+
+            const toast = document.createElement("div");
+            toast.className = `toast ${sev}`;
+            toast.style.position = "relative";
+            toast.style.overflow = "hidden";
+
+            toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-body">
+            <div class="toast-title">${sevIcon} ${escapeHtml(vuln.type)}</div>
+            <div class="toast-url">${escapeHtml(vuln.url)}</div>
+            <div class="toast-meta">
+                <span class="toast-severity ${sev}">${sev}</span>
+                <span class="toast-time">${timeAgo()}</span>
+            </div>
+        </div>
+        <div class="toast-close" onclick="dismissToast(this.parentElement)">✕</div>
+        <div class="toast-progress"></div>
+    `;
+
+            // Click to dismiss
+            toast.addEventListener("click", () => dismissToast(toast));
+
+            container.appendChild(toast);
+
+            // ✅ Auto dismiss after 4 seconds
+            setTimeout(() => dismissToast(toast), 4000);
+
+            // ✅ Max 5 toasts at once
+            const toasts = container.querySelectorAll(".toast");
+            if (toasts.length > 5) {
+                dismissToast(toasts[0]);
+            }
+        }
+
+        function dismissToast(toast) {
+            if (!toast || !toast.parentElement) return;
+            toast.style.animation = "slideOut 0.3s ease forwards";
+            setTimeout(() => {
+                if (toast.parentElement) toast.parentElement.removeChild(toast);
+            }, 300);
+        }
+
+        function updateAlertBadge(count) {
+            const badge = document.getElementById("alertBadge");
+            if (count > 0) {
+                badge.style.display = "flex";
+                badge.innerText = count > 99 ? "99+" : count;
+            } else {
+                badge.style.display = "none";
+            }
+        }
+
+        function checkNewVulns(vulns) {
+            vulns.forEach(v => {
+                // ✅ Create unique key per vuln
+                const key = v.url + "|" + v.type + "|" + v.payload;
+
+                if (!seenVulns.has(key)) {
+                    seenVulns.add(key);
+
+                    // ✅ Only show toast if scan is running
+                    if (document.getElementById("statusText").className.includes("running")) {
+                        showToast(v);
+                        newVulnCount++;
+                        updateAlertBadge(newVulnCount);
+                    }
+                }
+            });
+        }
+
+        // ✅ Reset badge when scan completes
+        function resetAlertBadge() {
+            newVulnCount = 0;
+            updateAlertBadge(0);
+        }
+
+        async function fetchData() {
+            try {
+                const res = await fetch('/live_data');
+                const data = await res.json();
+
+                updateStatus(data.status);
+
+                // ✅ ADD THIS — check for new vulns and show toasts
+                checkNewVulns(data.vulnerabilities || []);
+
+                // ✅ ADD THIS — reset badge when completed
+                if (data.status === "completed" || data.status === "idle") {
+                    resetAlertBadge();
+                }
+
+                document.getElementById("total").innerText = data.total;
+                document.getElementById("high").innerText = data.high;
+                document.getElementById("medium").innerText = data.medium;
+                document.getElementById("low").innerText = data.low;
+
+                // ✅ Risk Score update
+                document.getElementById("riskScore").innerText = data.risk_score;
+                document.getElementById("riskScore").style.color = data.risk_color;
+                document.getElementById("riskLabel").innerText = data.risk_label;
+                document.getElementById("riskLabel").style.color = data.risk_color;
+                document.getElementById("riskBar").style.width = data.risk_score + "%";
+                document.getElementById("riskBar").style.background = data.risk_color;
+
+                // ✅ Progress bar
+                document.getElementById("progressBar").style.width = (data.progress || 0) + "%";
+                document.getElementById("phaseText").innerText =
+                    (data.phase || "Initializing") + " (" + (data.progress || 0) + "%)";
+
+                // ✅ All values escaped before injecting into DOM
+                let html = "";
+                data.vulnerabilities.forEach(v => {
+                    html += `
+                    <div class="card">
+                        <b>${escapeHtml(v.type)}</b> | ${escapeHtml(v.severity)}<br>
+                        ${escapeHtml(v.url)}<br>
+                        Payload: ${escapeHtml(v.payload)}
+                    </div>`;
+                });
+
+                document.getElementById("vuln-list").innerHTML = html;
+
+                if (!chart) {
+                    initChart(data.high, data.medium, data.low);
+                } else {
+                    updateChart(data.high, data.medium, data.low);
+                }
+
+            } catch (e) {
+                console.log("[Dashboard Error]", e);
+            }
+        }
+
+        setInterval(fetchData, 1000);
+        fetchData();
+
+
+    </script>
+
+</body>
+
+</html>

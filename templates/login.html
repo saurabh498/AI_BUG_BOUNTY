@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>AI Bug Bounty Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #0f172a;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── ANIMATED BACKGROUND ── */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .bg-animation span {
+            position: absolute;
+            display: block;
+            width: 20px;
+            height: 20px;
+            background: rgba(56, 189, 248, 0.05);
+            animation: float 25s linear infinite;
+            bottom: -150px;
+            border-radius: 4px;
+        }
+
+        .bg-animation span:nth-child(1) {
+            left: 5%;
+            width: 80px;
+            height: 80px;
+            animation-delay: 0s;
+            animation-duration: 20s;
+        }
+
+        .bg-animation span:nth-child(2) {
+            left: 15%;
+            width: 30px;
+            height: 30px;
+            animation-delay: 2s;
+            animation-duration: 25s;
+        }
+
+        .bg-animation span:nth-child(3) {
+            left: 25%;
+            width: 50px;
+            height: 50px;
+            animation-delay: 4s;
+            animation-duration: 18s;
+        }
+
+        .bg-animation span:nth-child(4) {
+            left: 35%;
+            width: 20px;
+            height: 20px;
+            animation-delay: 0s;
+            animation-duration: 22s;
+        }
+
+        .bg-animation span:nth-child(5) {
+            left: 50%;
+            width: 60px;
+            height: 60px;
+            animation-delay: 3s;
+            animation-duration: 30s;
+        }
+
+        .bg-animation span:nth-child(6) {
+            left: 60%;
+            width: 25px;
+            height: 25px;
+            animation-delay: 6s;
+            animation-duration: 20s;
+        }
+
+        .bg-animation span:nth-child(7) {
+            left: 70%;
+            width: 90px;
+            height: 90px;
+            animation-delay: 1s;
+            animation-duration: 28s;
+        }
+
+        .bg-animation span:nth-child(8) {
+            left: 80%;
+            width: 35px;
+            height: 35px;
+            animation-delay: 5s;
+            animation-duration: 16s;
+        }
+
+        .bg-animation span:nth-child(9) {
+            left: 90%;
+            width: 15px;
+            height: 15px;
+            animation-delay: 8s;
+            animation-duration: 24s;
+        }
+
+        .bg-animation span:nth-child(10) {
+            left: 45%;
+            width: 45px;
+            height: 45px;
+            animation-delay: 2s;
+            animation-duration: 19s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+
+            100% {
+                transform: translateY(-1100px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* ── GRID OVERLAY ── */
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+        }
+
+        /* ── MAIN LAYOUT ── */
+        .container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ── LEFT SIDE ── */
+        .left {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 60px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+        }
+
+        .left h1 {
+            font-size: 48px;
+            font-weight: bold;
+            line-height: 1.2;
+            margin-bottom: 16px;
+        }
+
+        .left h1 span {
+            color: #38bdf8;
+        }
+
+        /* ── TYPEWRITER ── */
+        .typewriter {
+            font-size: 20px;
+            color: #94a3b8;
+            margin-bottom: 32px;
+            min-height: 30px;
+        }
+
+        .typewriter span {
+            color: #22c55e;
+            border-right: 2px solid #22c55e;
+            animation: blink 0.7s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                border-color: #22c55e;
+            }
+
+            50% {
+                border-color: transparent;
+            }
+        }
+
+        /* ── FEATURE CARDS ── */
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .feature {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #1e293b;
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #94a3b8;
+            transition: border-color 0.3s;
+        }
+
+        .feature:hover {
+            border-color: #38bdf8;
+            color: white;
+        }
+
+        .feature .icon {
+            font-size: 20px;
+        }
+
+        /* ── STATS ── */
+        .stats {
+            display: flex;
+            gap: 32px;
+        }
+
+        .stat h3 {
+            font-size: 28px;
+            color: #38bdf8;
+            font-weight: bold;
+        }
+
+        .stat p {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* ── RIGHT SIDE ── */
+        .right {
+            width: 420px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            border-left: 1px solid rgba(56, 189, 248, 0.1);
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .login-box {
+            width: 100%;
+        }
+
+        .login-box h2 {
+            font-size: 24px;
+            color: white;
+            margin-bottom: 6px;
+        }
+
+        .login-box p {
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 28px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 6px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 11px 14px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #38bdf8;
+            background: #1e293b;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            color: black;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .login-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .error {
+            background: rgba(127, 29, 29, 0.5);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .success {
+            background: rgba(20, 83, 45, 0.5);
+            border: 1px solid #22c55e;
+            color: #86efac;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            color: #334155;
+            font-size: 12px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #334155;
+        }
+
+        .links {
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 16px;
+        }
+
+        .links a {
+            color: #38bdf8;
+            text-decoration: none;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── TERMINAL EFFECT ── */
+        .terminal {
+            background: #020617;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 32px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .terminal .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+
+        .terminal-line {
+            margin-top: 8px;
+            color: #22c55e;
+            opacity: 0;
+            animation: fadein 0.5s forwards;
+        }
+
+        .terminal-line:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .terminal-line:nth-child(3) {
+            animation-delay: 1.2s;
+        }
+
+        .terminal-line:nth-child(4) {
+            animation-delay: 2.0s;
+        }
+
+        .terminal-line:nth-child(5) {
+            animation-delay: 2.8s;
+            color: #38bdf8;
+        }
+
+        @keyframes fadein {
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Animated background -->
+    <div class="bg-animation">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="grid-overlay"></div>
+
+    <div class="container">
+
+        <!-- ── LEFT SIDE ── -->
+        <div class="left">
+            <div class="badge">🛡️ AI-Powered Security Tool</div>
+
+            <h1>Find Vulnerabilities<br>Before <span>Hackers Do</span></h1>
+
+            <div class="typewriter">
+                Scanning for: <span id="typetext"></span>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <span class="icon">🔍</span>
+                    <span>SQL Injection Detection</span>
+                </div>
+                <div class="feature">
+                    <span class="icon">⚡</span>
+                    <span>XSS Vulnerability Scan</span>
+                </div>
+                <div class="feature">
+                    <span class="icon">🧠</span>
+                    <span>AI Payload Generation</span>
+                </div>
+                <div class="feature">
+                    <span class="icon">📊</span>
+                    <span>Live Risk Scoring</span>
+                </div>
+                <div class="feature">
+                    <span class="icon">🔐</span>
+                    <span>Login Bypass Testing</span>
+                </div>
+                <div class="feature">
+                    <span class="icon">📄</span>
+                    <span>PDF Report Export</span>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat">
+                    <h3>10+</h3>
+                    <p>Attack Vectors</p>
+                </div>
+                <div class="stat">
+                    <h3>AI</h3>
+                    <p>Payload Engine</p>
+                </div>
+                <div class="stat">
+                    <h3>100%</h3>
+                    <p>Open Source</p>
+                </div>
+            </div>
+
+            <!-- Terminal animation -->
+            <div class="terminal">
+                <span class="dot" style="background:#ef4444"></span>
+                <span class="dot" style="background:#facc15"></span>
+                <span class="dot" style="background:#22c55e"></span>
+                <div class="terminal-line">$ python3 main.py http://target.com</div>
+                <div class="terminal-line">[✔] Crawling target... 37 URLs found</div>
+                <div class="terminal-line">[!!!] SQL Injection Found: /login?id=1'--</div>
+                <div class="terminal-line">[!!!] XSS Found: /search?q=&lt;script&gt;alert(1)&lt;/script&gt;</div>
+                <div class="terminal-line">[✔] Report generated → scan_report.pdf</div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT SIDE ── -->
+        <div class="right">
+            <div class="login-box">
+                <h2>Welcome back 👋</h2>
+                <p>Login to access your scanner dashboard</p>
+
+                {% if error %}
+                <div class="error">⚠️ {{ error }}</div>
+                {% endif %}
+
+                {% if success %}
+                <div class="success">✅ {{ success }}</div>
+                {% endif %}
+
+                <form method="post" autocomplete="off">
+                    <div class="input-group">
+                        <label>Username</label>
+                        <input type="text" name="username" placeholder="Enter your username" required autofocus
+                            autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label>Password</label>
+                        <input type="password" name="password" placeholder="Enter your password" required
+                            autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="login-btn">
+                        🔐 Login to Scanner
+                    </button>
+                </form>
+
+                <div class="divider">or</div>
+
+                <div class="links">
+                    No account? <a href="/signup">Create one free</a>
+                    <br><br>
+                    <a href="/forgot">Forgot password?</a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ── TYPEWRITER EFFECT ──
+        const words = [
+            "SQL Injection...",
+            "XSS Vulnerabilities...",
+            "Login Bypasses...",
+            "Directory Exposure...",
+            "Open Redirects...",
+            "Information Disclosure..."
+        ];
+
+        let wordIndex = 0;
+        let charIndex = 0;
+        let deleting = false;
+        const el = document.getElementById("typetext");
+
+        function type() {
+            const word = words[wordIndex];
+            if (!deleting) {
+                el.textContent = word.substring(0, charIndex + 1);
+                charIndex++;
+                if (charIndex === word.length) {
+                    deleting = true;
+                    setTimeout(type, 1500);
+                    return;
+                }
+            } else {
+                el.textContent = word.substring(0, charIndex - 1);
+                charIndex--;
+                if (charIndex === 0) {
+                    deleting = false;
+                    wordIndex = (wordIndex + 1) % words.length;
+                }
+            }
+            setTimeout(type, deleting ? 60 : 100);
+        }
+
+        type();
+    </script>
+
+</body>
+
+</html>

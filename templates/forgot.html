@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Account Recovery — AI Bug Bounty Scanner</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .box {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 12px;
+            width: 380px;
+            box-shadow: 0 0 30px rgba(56,189,248,0.1);
+        }
+        h2 { color: #38bdf8; text-align: center; margin-bottom: 8px; }
+        p.sub { color: #94a3b8; font-size: 13px; text-align: center; margin-bottom: 24px; }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0 14px 0;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input:focus { outline: none; border-color: #38bdf8; }
+        label { font-size: 13px; color: #94a3b8; }
+        button {
+            width: 100%;
+            padding: 11px;
+            background: #38bdf8;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        button:hover { background: #0ea5e9; }
+        .error {
+            background: #7f1d1d;
+            color: #fca5a5;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .success {
+            background: #14532d;
+            color: #86efac;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .link {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        .link a { color: #38bdf8; text-decoration: none; }
+        .divider {
+            border: none;
+            border-top: 1px solid #334155;
+            margin: 24px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>🔑 Account Recovery</h2>
+        <p class="sub">Enter your email to recover your account</p>
+
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        {% if success %}<div class="success">{{ success }}</div>{% endif %}
+
+        <!-- Step 1: Find account by email -->
+        {% if step == 1 %}
+        <form method="post">
+            <input type="hidden" name="step" value="1">
+            <label>Email Address</label>
+            <input type="email" name="email" placeholder="Enter your email" required>
+            <button type="submit">Find My Account</button>
+        </form>
+
+        <!-- Step 2: Answer security question -->
+        {% elif step == 2 %}
+        <p style="color:#94a3b8;font-size:13px;">
+            Account found for: <b style="color:white;">{{ username }}</b>
+        </p>
+        <form method="post">
+            <input type="hidden" name="step" value="2">
+            <input type="hidden" name="username" value="{{ username }}">
+            <label>Security Question: <b style="color:white;">{{ question }}</b></label>
+            <input type="text" name="answer" placeholder="Your answer" required>
+            <button type="submit">Verify Answer</button>
+        </form>
+
+        <!-- Step 3: Set new password -->
+        {% elif step == 3 %}
+        <form method="post">
+            <input type="hidden" name="step" value="3">
+            <input type="hidden" name="username" value="{{ username }}">
+            <label>New Password</label>
+            <input type="password" name="new_password" placeholder="Min 6 characters" required>
+            <label>Confirm New Password</label>
+            <input type="password" name="confirm_password" placeholder="Repeat password" required>
+            <button type="submit">Reset Password</button>
+        </form>
+        {% endif %}
+
+        <hr class="divider">
+        <div class="link">
+            <a href="/login">← Back to Login</a>
+        </div>
+    </div>
+</body>
+</html>
