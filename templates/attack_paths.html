@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Attack Path Intelligence</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+            padding: 20px;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 24px;
+            background: #1e293b;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-blue   { background: #38bdf8; color: black; }
+        .btn-red    { background: #ef4444; color: white; }
+
+        /* ── HEADER ── */
+        .page-header {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid rgba(56,189,248,0.2);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .page-header h1 {
+            font-size: 28px;
+            color: #38bdf8;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* ── PATH CARD ── */
+        .path-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border-left: 4px solid #38bdf8;
+            transition: transform 0.2s;
+        }
+
+        .path-card:hover { transform: translateY(-2px); }
+        .path-card.CRITICAL { border-left-color: #ef4444; }
+        .path-card.HIGH     { border-left-color: #f97316; }
+        .path-card.MEDIUM   { border-left-color: #facc15; }
+
+        .path-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .path-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .path-badges {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-critical { background: #7f1d1d; color: #fca5a5; }
+        .badge-high     { background: #431407; color: #f97316; }
+        .badge-medium   { background: #422006; color: #facc15; }
+        .badge-success  { background: #052e16; color: #22c55e; }
+        .badge-warning  { background: #422006; color: #facc15; }
+
+        .impact-box {
+            background: rgba(239,68,68,0.05);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            font-size: 13px;
+            color: #fca5a5;
+        }
+
+        /* ── ATTACK STEPS ── */
+        .steps-container {
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .steps-container::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #38bdf8, #8b5cf6);
+        }
+
+        .step-item {
+            position: relative;
+            padding: 6px 0 6px 16px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .step-item::before {
+            content: '';
+            position: absolute;
+            left: -4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 10px;
+            height: 10px;
+            background: #38bdf8;
+            border-radius: 50%;
+            border: 2px solid #0f172a;
+        }
+
+        .step-item.first::before { background: #22c55e; }
+        .step-item.last::before  { background: #ef4444; }
+
+        /* ── URLS ── */
+        .url-list {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #334155;
+        }
+
+        .url-item {
+            font-size: 11px;
+            color: #38bdf8;
+            font-family: monospace;
+            padding: 2px 0;
+        }
+
+        /* ── PROGRESS ── */
+        .completeness-bar {
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .completeness-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s;
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #64748b;
+        }
+
+        .empty-state .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* ── LOADER ── */
+        .loader {
+            border: 3px solid #1e293b;
+            border-top: 3px solid #38bdf8;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 40px auto;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <div class="navbar">
+        <div class="logo">🗺️ Attack Path Intelligence</div>
+        <div style="display:flex;gap:10px;">
+            <a href="/dashboard" class="btn btn-blue">📊 Dashboard</a>
+            <a href="/logout" class="btn btn-red">🚪 Logout</a>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="page-header">
+        <h1>🗺️ Attack Path Intelligence</h1>
+        <p>
+            AI-generated attack chains showing how vulnerabilities
+            can be combined for maximum impact
+        </p>
+    </div>
+
+    <!-- PATHS -->
+    <div id="pathsContainer">
+        <div class="loader"></div>
+    </div>
+
+    <script>
+        async function loadPaths() {
+            try {
+                const res = await fetch('/attack_paths');
+                const data = await res.json();
+                const container = document.getElementById("pathsContainer");
+
+                if (!data.paths || data.paths.length === 0) {
+                    container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">🔍</div>
+                        <h3>No Attack Paths Found</h3>
+                        <p>Run a scan first to discover attack paths</p>
+                        <br>
+                        <a href="/index" class="btn btn-blue">Start a Scan</a>
+                    </div>`;
+                    return;
+                }
+
+                let html = `
+                <div style="margin-bottom:16px;color:#64748b;font-size:13px;">
+                    Found <b style="color:white;">${data.paths.length}</b>
+                    potential attack chains
+                </div>`;
+
+                data.paths.forEach(path => {
+                    const sevClass = path.severity;
+                    const badgeClass = `badge-${path.severity.toLowerCase()}`;
+                    const fillColor = path.severity === 'CRITICAL' ? '#ef4444' :
+                                     path.severity === 'HIGH' ? '#f97316' :
+                                     path.severity === 'MEDIUM' ? '#facc15' : '#22c55e';
+
+                    const exploitBadge = path.fully_exploitable
+                        ? `<span class="badge badge-critical">🔴 FULLY EXPLOITABLE</span>`
+                        : `<span class="badge badge-warning">🟡 ${path.completeness}% Complete</span>`;
+
+                    const stepsHtml = path.steps.map((step, i) => {
+                        const cls = i === 0 ? 'first' :
+                                   i === path.steps.length - 1 ? 'last' : '';
+                        return `<div class="step-item ${cls}">${step}</div>`;
+                    }).join('');
+
+                    const urlsHtml = path.relevant_urls.length > 0 ? `
+                    <div class="url-list">
+                        <div style="font-size:11px;color:#475569;margin-bottom:4px;">
+                            🎯 Starting Points:
+                        </div>
+                        ${path.relevant_urls.map(url =>
+                            `<div class="url-item">→ ${url}</div>`
+                        ).join('')}
+                    </div>` : '';
+
+                    html += `
+                    <div class="path-card ${sevClass}">
+                        <div class="path-header">
+                            <div class="path-title">⛓️ ${path.name}</div>
+                            <div class="path-badges">
+                                <span class="badge ${badgeClass}">${path.severity}</span>
+                                ${exploitBadge}
+                            </div>
+                        </div>
+
+                        <div class="impact-box">
+                            💥 <b>Impact:</b> ${path.impact}
+                        </div>
+
+                        <div style="font-size:12px;color:#64748b;margin-bottom:6px;">
+                            Completeness: ${path.completeness}%
+                        </div>
+                        <div class="completeness-bar">
+                            <div class="completeness-fill"
+                                 style="width:${path.completeness}%;
+                                        background:${fillColor};">
+                            </div>
+                        </div>
+
+                        <div style="font-size:12px;font-weight:bold;
+                                    color:white;margin-bottom:8px;">
+                            ⚔️ Attack Chain:
+                        </div>
+                        <div class="steps-container">
+                            ${stepsHtml}
+                        </div>
+
+                        ${urlsHtml}
+
+                        ${path.missing_vulns.length > 0 ? `
+                        <div style="margin-top:10px;padding-top:10px;
+                                    border-top:1px solid #334155;">
+                            <span style="font-size:11px;color:#475569;">
+                                Missing for full chain:
+                            </span>
+                            ${path.missing_vulns.map(m =>
+                                `<span style="font-size:11px;color:#64748b;
+                                             margin-left:6px;">• ${m}</span>`
+                            ).join('')}
+                        </div>` : ''}
+                    </div>`;
+                });
+
+                container.innerHTML = html;
+
+            } catch (e) {
+                document.getElementById("pathsContainer").innerHTML =
+                    `<p style="color:#ef4444;text-align:center;">
+                        ❌ Error loading attack paths: ${e}
+                    </p>`;
+            }
+        }
+
+        loadPaths();
+    </script>
+
+</body>
+</html>

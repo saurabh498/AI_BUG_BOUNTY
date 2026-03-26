@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Scan History</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #38bdf8;
+        }
+
+        .scan-card {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .scan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .scan-header h3 {
+            margin: 0;
+            color: #38bdf8;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .HIGH {
+            background: #ef4444;
+        }
+
+        .CRITICAL {
+            background: #7f1d1d;
+        }
+
+        .MEDIUM {
+            background: #facc15;
+            color: black;
+        }
+
+        .LOW {
+            background: #22c55e;
+            color: black;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        th,
+        td {
+            border: 1px solid #334155;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background: #0f172a;
+            color: #38bdf8;
+        }
+
+        tr:hover {
+            background: #0f172a;
+        }
+
+        .meta {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        .no-history {
+            text-align: center;
+            color: #94a3b8;
+            margin-top: 60px;
+            font-size: 18px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            background: #38bdf8;
+            color: black;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: #0ea5e9;
+        }
+
+        details summary {
+            cursor: pointer;
+            color: #38bdf8;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>📜 Scan History</h1>
+
+    <a href="/" class="btn">🏠 Home</a>
+    <a href="/dashboard" class="btn" style="margin-left:10px;">📊 Dashboard</a>
+
+    <br><br>
+
+    {% if scans %}
+
+    {% for scan in scans | reverse %}
+    <div class="scan-card">
+
+        <div class="scan-header">
+            <h3>🎯 {{ scan.target }}</h3>
+            <div style="display:flex;gap:10px;align-items:center;">
+                <span class="badge HIGH">{{ scan.total }} Vulns</span>
+                <span class="badge" style="background:{{ scan.risk_color or '#475569' }};color:white;">
+                    {{ scan.risk_score or 'N/A' }}/100 — {{ scan.risk_label or 'UNKNOWN' }}
+                </span>
+            </div>
+        </div>
+
+        <div class="meta">
+            🕒 {{ scan.timestamp }}
+        </div>
+
+        <!-- ✅ PDF Download Button -->
+        <!-- Replace the download button -->
+        <a href="/download_history_report/{{ scan.id }}">
+            <button style="
+        background:#22c55e;
+        color:black;
+        border:none;
+        padding:8px 14px;
+        border-radius:8px;
+        margin-bottom:10px;
+        cursor:pointer;
+        font-size:13px;">
+                📄 Download PDF Report
+            </button>
+        </a>
+
+        <details>
+            <summary>View {{ scan.total }} vulnerabilities</summary>
+
+            {% if scan.vulnerabilities %}
+            <table>
+                <tr>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>URL</th>
+                    <th>Payload</th>
+                </tr>
+                {% for v in scan.vulnerabilities %}
+                <tr>
+                    <td>{{ v.type }}</td>
+                    <td>
+                        <span class="badge {{ v.severity }}">
+                            {{ v.severity }}
+                        </span>
+                    </td>
+                    <td style="word-break:break-all;">{{ v.url }}</td>
+                    <td style="word-break:break-all;">{{ v.payload }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p style="color:#94a3b8;">No vulnerabilities recorded.</p>
+            {% endif %}
+
+        </details>
+
+    </div>
+    {% endfor %}
+
+    {% else %}
+    <div class="no-history">
+        <p>📭 No scans found for your account.</p>
+        <p>Run your first scan and it will appear here.</p>
+        <br>
+        <a href="/index" class="btn">Start a Scan</a>
+    </div>
+    {% endif %}
+
+</body>
+
+</html>

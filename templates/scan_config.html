@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scan Config — AI Bug Bounty Scanner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: white;
+            min-height: 100vh;
+        }
+
+        /* ── NAVBAR ── */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            border-bottom: 1px solid rgba(56,189,248,0.1);
+            background: rgba(15,23,42,0.9);
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        .logo span { color: white; }
+
+        .nav-links { display: flex; gap: 12px; align-items: center; }
+
+        .nav-links a {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .nav-links a:hover { color: white; }
+
+        .user-badge {
+            background: rgba(56,189,248,0.1);
+            border: 1px solid rgba(56,189,248,0.3);
+            color: #38bdf8;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        /* ── MAIN ── */
+        .main {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #38bdf8;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+
+        /* ── CARDS ── */
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            font-size: 16px;
+            color: #38bdf8;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── SCAN MODE ── */
+        .mode-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .mode-card {
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .mode-card:hover {
+            border-color: #38bdf8;
+        }
+
+        .mode-card.selected {
+            border-color: #38bdf8;
+            background: rgba(56,189,248,0.05);
+        }
+
+        .mode-card .mode-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .mode-card h4 {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .mode-card p {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        /* ── TOGGLES ── */
+        .toggle-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .toggle-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .toggle-label .icon { font-size: 18px; }
+
+        .toggle-label .desc {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        /* ── TOGGLE SWITCH ── */
+        .switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input { opacity: 0; width: 0; height: 0; }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #334155;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: 0.3s;
+        }
+
+        input:checked + .slider { background: #38bdf8; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* ── THREADS SLIDER ── */
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            accent-color: #38bdf8;
+        }
+
+        .slider-val {
+            font-size: 18px;
+            font-weight: bold;
+            color: #38bdf8;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        /* ── DELAY ── */
+        .delay-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .delay-btn {
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 13px;
+            color: #94a3b8;
+            transition: all 0.2s;
+        }
+
+        .delay-btn:hover { border-color: #38bdf8; color: white; }
+        .delay-btn.selected { border-color: #38bdf8; color: #38bdf8; }
+        .delay-btn .delay-label { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+        /* ── START BUTTON ── */
+        .start-section {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .start-info h3 { font-size: 16px; margin-bottom: 4px; }
+        .start-info p { font-size: 13px; color: #64748b; }
+
+        .start-btn {
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+            color: black;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity 0.2s;
+        }
+
+        .start-btn:hover { opacity: 0.9; }
+
+        /* ── SUMMARY BAR ── */
+        .summary-bar {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .summary-bar span { color: #38bdf8; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="logo">🛡️ AI<span>BugScanner</span></div>
+        <div class="nav-links">
+            <span class="user-badge">👤 {{ username }}</span>
+            <a href="/history">📜 History</a>
+            <a href="/logout" style="color:#ef4444;">🚪 Logout</a>
+        </div>
+    </nav>
+
+    <div class="main">
+        <h1>⚙️ Scan Configuration</h1>
+        <p class="subtitle">Customize your scan before launching</p>
+
+        <!-- SUMMARY BAR -->
+        <div class="summary-bar">
+            Target: <span id="summaryTarget">{{ target }}</span>
+            &nbsp;|&nbsp; Mode: <span id="summaryMode">Standard</span>
+            &nbsp;|&nbsp; Modules: <span id="summaryModules">6</span>
+            &nbsp;|&nbsp; Threads: <span id="summaryThreads">10</span>
+            &nbsp;|&nbsp; Delay: <span id="summaryDelay">0.15s</span>
+        </div>
+
+        <form action="/start_configured_scan" method="post" id="configForm">
+            <input type="hidden" name="target" value="{{ target }}">
+
+            <!-- ── SCAN MODE ── -->
+            <div class="card">
+                <h3>⚡ Scan Mode</h3>
+                <div class="mode-grid">
+                    <div class="mode-card selected" onclick="selectMode('fast', this)">
+                        <div class="mode-icon">🚀</div>
+                        <h4>Fast</h4>
+                        <p>Headers + Sensitive Files only. ~30 seconds</p>
+                        <input type="radio" name="scan_mode"
+                               value="fast" style="display:none" checked>
+                    </div>
+                    <div class="mode-card" onclick="selectMode('standard', this)">
+                        <div class="mode-icon">🎯</div>
+                        <h4>Standard</h4>
+                        <p>All modules, balanced speed. ~2-5 min</p>
+                        <input type="radio" name="scan_mode"
+                               value="standard" style="display:none">
+                    </div>
+                    <div class="mode-card" onclick="selectMode('deep', this)">
+                        <div class="mode-icon">🔬</div>
+                        <h4>Deep</h4>
+                        <p>All modules + fuzzing. ~10-15 min</p>
+                        <input type="radio" name="scan_mode"
+                               value="deep" style="display:none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── MODULES ── -->
+            <div class="card">
+                <h3>🧩 Scan Modules</h3>
+                <div class="toggle-grid">
+
+                    <div class="toggle-item">
+                        <div class="toggle-label">
+                            <span class="icon">🔎</span>
+                            <div>
+                                <div>Security Headers</div>
+                                <div class="desc">Check for missing HTTP headers</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" name="module_headers" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-item">
+                        <div class="toggle-label">
+                            <span class="icon">🗂️</span>
+                            <div>
+                                <div>Sensitive Files</div>
+                                <div class="desc">Find exposed .env, .git, backups</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" name="module_sensitive" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-item">
+                        <div class="toggle-label">
+                            <span class="icon">💉</span>
+                            <div>
+                                <div>SQL Injection</div>
+                                <div class="desc">Test for SQLi vulnerabilities</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" name="module_sqli" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-item">
+                        <div class="toggle-label">
+                            <span class="icon">⚡</span>
+                            <div>
+                                <div>XSS</div>
+                                <div class="desc">Test for XSS vulnerabilities</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" name="module_xss" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-item">
+                        <div class="toggle-label">
+                            <span class="icon">↪️</span>
+                            <div>
+                                <div>Open Redirect</div>
+                                <div class="desc">Test for redirect vulnerabilities</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" name="module_redirect" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-item">
+                        <div class="toggle-label">
+                            <span class="icon">🎯</span>
+                            <div>
+                                <div>Parameter Fuzzing</div>
+                                <div class="desc">Fuzz all URL parameters</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" name="module_fuzzer" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-item">
+                        <div class="toggle-label">
+                            <span class="icon">🔐</span>
+                            <div>
+                                <div>Login Bypass</div>
+                                <div class="desc">Test login form for SQLi bypass</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" name="module_login" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-item">
+                        <div class="toggle-label">
+                            <span class="icon">📁</span>
+                            <div>
+                                <div>Directory Scan</div>
+                                <div class="desc">Bruteforce hidden directories</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" name="module_dirs" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-item">
+                        <div class="toggle-label">
+                            <span class="icon">🔑</span>
+                            <div>
+                                <div>Default Credentials</div>
+                                <div class="desc">Test for weak/default passwords</div>
+                            </div>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" name="module_auth" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── THREADS ── -->
+            <div class="card">
+                <h3>🧵 Thread Count</h3>
+                <div class="slider-row">
+                    <span style="font-size:13px;color:#64748b;">1</span>
+                    <input type="range" name="threads"
+                           min="1" max="20" value="10"
+                           oninput="updateThreads(this.value)">
+                    <span style="font-size:13px;color:#64748b;">20</span>
+                    <div class="slider-val" id="threadVal">10</div>
+                </div>
+                <div class="slider-labels">
+                    <span>Slower / Safer</span>
+                    <span>Faster / Aggressive</span>
+                </div>
+            </div>
+
+            <!-- ── DELAY ── -->
+            <div class="card">
+                <h3>⏱️ Request Delay</h3>
+                <div class="delay-grid">
+                    <div class="delay-btn" onclick="selectDelay('0', this)">
+                        <div>None</div>
+                        <div class="delay-label">Fastest</div>
+                        <input type="radio" name="delay"
+                               value="0" style="display:none">
+                    </div>
+                    <div class="delay-btn selected" onclick="selectDelay('0.15', this)">
+                        <div>0.15s</div>
+                        <div class="delay-label">Recommended</div>
+                        <input type="radio" name="delay"
+                               value="0.15" style="display:none" checked>
+                    </div>
+                    <div class="delay-btn" onclick="selectDelay('0.5', this)">
+                        <div>0.5s</div>
+                        <div class="delay-label">Stealthy</div>
+                        <input type="radio" name="delay"
+                               value="0.5" style="display:none">
+                    </div>
+                    <div class="delay-btn" onclick="selectDelay('1', this)">
+                        <div>1s</div>
+                        <div class="delay-label">Very Stealthy</div>
+                        <input type="radio" name="delay"
+                               value="1" style="display:none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── START ── -->
+            <div class="start-section">
+                <div class="start-info">
+                    <h3>Ready to scan?</h3>
+                    <p>Review your config above then launch the scan</p>
+                </div>
+                <button type="submit" class="start-btn">
+                    🚀 Launch Scan
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+    <script>
+        function selectMode(mode, el) {
+            document.querySelectorAll(".mode-card").forEach(c => {
+                c.classList.remove("selected");
+                c.querySelector("input").checked = false;
+            });
+            el.classList.add("selected");
+            el.querySelector("input").checked = true;
+
+            const labels = { fast: "Fast", standard: "Standard", deep: "Deep" };
+            document.getElementById("summaryMode").innerText = labels[mode];
+
+            // ✅ Auto-configure modules based on mode
+            if (mode === "fast") {
+                setModules(["headers", "sensitive"]);
+                updateThreads(5);
+                document.querySelector("input[name=threads]").value = 5;
+            } else if (mode === "standard") {
+                setModules(["headers", "sensitive", "sqli", "xss", "redirect", "dirs"]);
+                updateThreads(10);
+                document.querySelector("input[name=threads]").value = 10;
+            } else if (mode === "deep") {
+                setModules(["headers", "sensitive", "sqli", "xss",
+                            "redirect", "fuzzer", "login", "dirs"]);
+                updateThreads(15);
+                document.querySelector("input[name=threads]").value = 15;
+            }
+        }
+
+        function setModules(enabled) {
+            const all = ["headers", "sensitive", "sqli", "xss",
+                         "redirect", "fuzzer", "login", "dirs"];
+            all.forEach(m => {
+                const cb = document.querySelector(`input[name=module_${m}]`);
+                if (cb) cb.checked = enabled.includes(m);
+            });
+            updateModuleCount();
+        }
+
+        function updateModuleCount() {
+            const count = document.querySelectorAll(
+                "input[type=checkbox]:checked"
+            ).length;
+            document.getElementById("summaryModules").innerText = count;
+        }
+
+        function updateThreads(val) {
+            document.getElementById("threadVal").innerText = val;
+            document.getElementById("summaryThreads").innerText = val;
+        }
+
+        function selectDelay(val, el) {
+            document.querySelectorAll(".delay-btn").forEach(b => {
+                b.classList.remove("selected");
+                b.querySelector("input").checked = false;
+            });
+            el.classList.add("selected");
+            el.querySelector("input").checked = true;
+            document.getElementById("summaryDelay").innerText = val + "s";
+        }
+
+        // ✅ Update module count when toggles change
+        document.querySelectorAll("input[type=checkbox]").forEach(cb => {
+            cb.addEventListener("change", updateModuleCount);
+        });
+    </script>
+
+</body>
+</html>

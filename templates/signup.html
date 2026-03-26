@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Signup — AI Bug Bounty Scanner</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .box {
+            background: #1e293b;
+            padding: 40px;
+            border-radius: 12px;
+            width: 380px;
+            box-shadow: 0 0 30px rgba(56,189,248,0.1);
+        }
+        h2 { color: #38bdf8; text-align: center; margin-bottom: 24px; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0 14px 0;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #38bdf8;
+        }
+        select option { background: #0f172a; }
+        label { font-size: 13px; color: #94a3b8; }
+        button {
+            width: 100%;
+            padding: 11px;
+            background: #22c55e;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        button:hover { background: #16a34a; }
+        .error {
+            background: #7f1d1d;
+            color: #fca5a5;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .success {
+            background: #14532d;
+            color: #86efac;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .link {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        .link a { color: #38bdf8; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>👤 Sign Up</h2>
+
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}
+        {% if success %}<div class="success">{{ success }}</div>{% endif %}
+
+        <form method="post">
+            <label>Username</label>
+            <input type="text" name="username" placeholder="Choose a username" required>
+
+            <label>Email</label>
+            <input type="email" name="email" placeholder="Enter your email" required>
+
+            <label>Password</label>
+            <input type="password" name="password" placeholder="Min 6 characters" required>
+
+            <label>Confirm Password</label>
+            <input type="password" name="confirm" placeholder="Repeat password" required>
+
+            <label>Security Question</label>
+            <select name="security_question" required>
+                <option value="">-- Select a question --</option>
+                <option value="pet">What was your first pet's name?</option>
+                <option value="city">What city were you born in?</option>
+                <option value="school">What was your primary school name?</option>
+                <option value="mother">What is your mother's maiden name?</option>
+                <option value="car">What was your first car?</option>
+            </select>
+
+            <label>Security Answer</label>
+            <input type="text" name="security_answer" placeholder="Your answer" required>
+
+            <button type="submit">Create Account</button>
+        </form>
+
+        <div class="link">
+            Already have an account? <a href="/login">Login</a>
+        </div>
+    </div>
+</body>
+</html>
