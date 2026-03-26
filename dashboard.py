@@ -16,25 +16,26 @@ from reportlab.lib.units import inch
 import sqlite3
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from auth.database import init_db, get_user_by_username, create_user
-from auth.models import User
 from auth.database import init_db, get_user_by_username, get_user_by_email, create_user, update_password
+from auth.models import User
 from modules.report_writer import generate_ai_report, generate_hackerone_report
-import schedule
 import time
 from dotenv import load_dotenv
+
 load_dotenv()
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ── AUTH SETUP ──
-app.secret_key = "saurabh_scanner_2026_xk92pzla"
+# ✅ FIXED: Read secret key from environment variable
+app.secret_key = os.environ.get("SECRET_KEY", os.urandom(32))
 
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 login_manager.login_message = "Please log in to access the scanner."
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -43,10 +44,14 @@ def load_user(user_id):
     cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
     row = cursor.fetchone()
     conn.close()
+    if row is None:
+        return None
     return User.from_db_row(row)
+
 
 # Initialize DB on startup
 init_db()
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -54,11 +59,16 @@ def login():
         username = request.form.get("username")
         password = request.form.get("password")
         row = get_user_by_username(username)
+
+        # ✅ FIXED: Check if row exists before creating User object
+        if not row:
+            return render_template("login.html", error="Invalid username or password", success=None)
+
         user = User.from_db_row(row)
 
         if user and check_password_hash(user.password, password):
             login_user(user)
-            return redirect(url_for("index"))  # ✅ goes to index now
+            return redirect(url_for("index"))
         else:
             return render_template("login.html", error="Invalid username or password", success=None)
 
@@ -98,7 +108,6 @@ def signup():
     return render_template("signup.html", error=None, success=None)
 
 
-
 # ── MONITORING ──
 monitoring_scans_run = 0
 monitoring_active = False
@@ -123,7 +132,16 @@ def start_monitoring():
     global monitoring_active, monitoring_target
     global monitoring_interval, monitoring_thread, monitoring_scans_run
 
-    monitoring_scans_run = 0  # reset on new session
+    # ✅ FIXED: Read target and interval from form data
+    monitoring_target = request.form.get("target", "").strip()
+    monitoring_interval = int(request.form.get("interval", 6))
+    monitoring_scans_run = 0
+
+    # ✅ FIXED: Set monitoring_active to True so the loop actually runs
+    monitoring_active = True
+
+    # ✅ FIXED: Capture user_id before spawning thread (was NameError inside thread)
+    user_id = current_user.id
 
     def monitor_loop():
         global monitoring_active, monitoring_scans_run
@@ -131,15 +149,14 @@ def start_monitoring():
             print(f"[MONITOR] Scanning {monitoring_target}")
             clear_vulns()
             set_status("running")
+
+            # ✅ FIXED: Removed duplicate scan — was running start_scan twice per cycle
             start_scan(monitoring_target, user_id=user_id)
             save_scan_history(user_id=user_id)
             set_status("completed")
-            monitoring_scans_run += 1  # ✅ increment here
-            start_scan(monitoring_target, user_id=user_id)
-            save_scan_history(user_id=user_id)
-            set_status("completed")
+            monitoring_scans_run += 1
+
             print(f"[MONITOR] Done. Next scan in {monitoring_interval} hours")
-            # Wait for interval
             for _ in range(monitoring_interval * 3600):
                 if not monitoring_active:
                     break
@@ -166,8 +183,9 @@ def monitoring_status():
         "active": monitoring_active,
         "target": monitoring_target,
         "interval": monitoring_interval,
-        "scans_run": monitoring_scans_run  # ✅ add this
+        "scans_run": monitoring_scans_run
     })
+
 
 @app.route("/forgot", methods=["GET", "POST"])
 def forgot():
@@ -180,18 +198,19 @@ def forgot():
     if step == 1:
         email = request.form.get("email", "").strip().lower()
         row = get_user_by_email(email)
-        user = User.from_db_row(row)
 
-        if not user:
+        if not row:
             return render_template("forgot.html", step=1,
                                    error="No account found with that email.", success=None)
 
+        user = User.from_db_row(row)
+
         question_map = {
-            "pet": "What was your first pet's name?",
-            "city": "What city were you born in?",
+            "pet":    "What was your first pet's name?",
+            "city":   "What city were you born in?",
             "school": "What was your primary school name?",
             "mother": "What is your mother's maiden name?",
-            "car": "What was your first car?",
+            "car":    "What was your first car?",
         }
         question = question_map.get(user.security_question, user.security_question)
 
@@ -203,17 +222,24 @@ def forgot():
         username = request.form.get("username")
         answer = request.form.get("answer", "").strip().lower()
         row = get_user_by_username(username)
+
+        if not row:
+            return render_template("forgot.html", step=2,
+                                   error="User not found.", username=username,
+                                   question="", success=None)
+
         user = User.from_db_row(row)
 
-        if not user or not check_password_hash(user.security_answer, answer):
-            question_map = {
-                "pet": "What was your first pet's name?",
-                "city": "What city were you born in?",
-                "school": "What was your primary school name?",
-                "mother": "What is your mother's maiden name?",
-                "car": "What was your first car?",
-            }
-            question = question_map.get(user.security_question, "") if user else ""
+        question_map = {
+            "pet":    "What was your first pet's name?",
+            "city":   "What city were you born in?",
+            "school": "What was your primary school name?",
+            "mother": "What is your mother's maiden name?",
+            "car":    "What was your first car?",
+        }
+        question = question_map.get(user.security_question, user.security_question)
+
+        if not check_password_hash(user.security_answer, answer):
             return render_template("forgot.html", step=2,
                                    error="Incorrect answer. Try again.",
                                    username=username, question=question, success=None)
@@ -279,7 +305,6 @@ def build_pdf(target, timestamp, score, label, color, vulns):
     )))
     elements.append(Spacer(1, 0.2 * inch))
 
-    # ── META ──
     meta_style = ParagraphStyle(
         "meta", parent=styles["Normal"],
         fontSize=11, textColor=colors.HexColor("#1e293b"), spaceAfter=4
@@ -288,7 +313,6 @@ def build_pdf(target, timestamp, score, label, color, vulns):
     elements.append(Paragraph(f"<b>Generated:</b> {timestamp}", meta_style))
     elements.append(Spacer(1, 0.15 * inch))
 
-    # ── RISK SCORE BOX ──
     risk_color_map = {
         "#7f1d1d": "#fee2e2",
         "#ef4444": "#fef2f2",
@@ -317,10 +341,9 @@ def build_pdf(target, timestamp, score, label, color, vulns):
     elements.append(risk_table)
     elements.append(Spacer(1, 0.2 * inch))
 
-    # ── SUMMARY TABLE ──
-    high = len([v for v in vulns if v["severity"] in ["HIGH", "CRITICAL"]])
+    high   = len([v for v in vulns if v["severity"] in ["HIGH", "CRITICAL"]])
     medium = len([v for v in vulns if v["severity"] == "MEDIUM"])
-    low = len([v for v in vulns if v["severity"] == "LOW"])
+    low    = len([v for v in vulns if v["severity"] == "LOW"])
 
     summary_data = [
         ["Metric", "Value"],
@@ -347,7 +370,6 @@ def build_pdf(target, timestamp, score, label, color, vulns):
     elements.append(summary_table)
     elements.append(Spacer(1, 0.3 * inch))
 
-    # ── VULNERABILITY TABLE ──
     elements.append(Paragraph("Vulnerability Details", ParagraphStyle(
         "heading", parent=styles["Heading2"],
         textColor=colors.HexColor("#0ea5e9"), fontSize=14, spaceAfter=8
@@ -362,14 +384,12 @@ def build_pdf(target, timestamp, score, label, color, vulns):
             "UNKNOWN":  "#64748b",
         }
 
-        # ✅ 5-column table with Next Step
         vuln_data = [["Type", "Severity", "URL", "Payload", "Next Step"]]
 
         for v in vulns:
             sev = v.get("severity", "").upper()
             sev_color = severity_colors.get(sev, "#64748b")
 
-            # ✅ Get first next step
             suggestions = v.get("suggestions", {})
             next_steps = suggestions.get("next_steps", [])
             first_step = next_steps[0] if next_steps else "Investigate manually"
@@ -397,7 +417,6 @@ def build_pdf(target, timestamp, score, label, color, vulns):
                 )),
             ])
 
-        # ✅ 5-column widths
         vuln_table = Table(
             vuln_data,
             colWidths=[1.1*inch, 0.8*inch, 1.8*inch, 1.3*inch, 1.5*inch]
@@ -417,11 +436,9 @@ def build_pdf(target, timestamp, score, label, color, vulns):
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ]))
         elements.append(vuln_table)
-
     else:
         elements.append(Paragraph("No vulnerabilities found.", styles["Normal"]))
 
-    # ── FOOTER ──
     elements.append(Spacer(1, 0.3 * inch))
     elements.append(Paragraph(
         "Generated by AI Bug Bounty Scanner — For authorized testing only.",
@@ -434,7 +451,6 @@ def build_pdf(target, timestamp, score, label, color, vulns):
     return buffer
 
 
-# ── DISABLE CACHING ──
 @app.after_request
 def add_header(response):
     response.headers["Cache-Control"] = "no-store"
@@ -447,10 +463,12 @@ def home():
         return redirect(url_for("index"))
     return redirect(url_for("login"))
 
+
 @app.route("/index")
 @login_required
 def index():
     return render_template("index.html", username=current_user.username)
+
 
 @app.route("/attack_paths")
 @login_required
@@ -459,13 +477,15 @@ def attack_paths():
     paths = build_attack_paths()
     return jsonify({"paths": paths})
 
+
 @app.route("/attack_path_page")
 @login_required
 def attack_path_page():
     return render_template("attack_paths.html")
 
+
 @app.route("/dashboard")
-@login_required 
+@login_required
 def dashboard():
     data = vulnerabilities
     return render_template(
@@ -482,7 +502,6 @@ def dashboard():
 def scan():
     target = request.form.get("target", "").strip()
 
-    # ✅ Server-side validation before starting thread
     from core.validator import validate_target
     is_valid, cleaned_url, error = validate_target(target)
 
@@ -513,7 +532,7 @@ def scan():
 
 
 @app.route("/live_data")
-@login_required 
+@login_required
 def live_data():
     progress, phase = get_progress()
     score, label, color = get_risk_score()
@@ -532,11 +551,11 @@ def live_data():
         "risk_color": color
     })
 
+
 @app.route("/download_json")
 @login_required
 def download_json():
     from core.storage import get_risk_score
-    import io
 
     score, label, color = get_risk_score()
 
@@ -575,12 +594,12 @@ def download_json():
         mimetype="application/json"
     )
 
+
 @app.route("/configure_scan", methods=["POST"])
 @login_required
 def configure_scan():
     target = request.form.get("target", "").strip()
 
-    # ✅ Validate first
     from core.validator import validate_target
     is_valid, cleaned_url, error = validate_target(target)
     if not is_valid:
@@ -601,7 +620,6 @@ def start_configured_scan():
     threads = int(request.form.get("threads", 10))
     delay = float(request.form.get("delay", 0.15))
 
-    # ✅ Which modules are enabled
     config = {
         "headers":   "module_headers"   in request.form,
         "sensitive": "module_sensitive" in request.form,
@@ -611,7 +629,7 @@ def start_configured_scan():
         "fuzzer":    "module_fuzzer"    in request.form,
         "login":     "module_login"     in request.form,
         "dirs":      "module_dirs"      in request.form,
-        "auth":      "module_auth"      in request.form,  # ✅ NEW
+        "auth":      "module_auth"      in request.form,
     }
 
     clear_vulns()
@@ -623,10 +641,8 @@ def start_configured_scan():
     def run():
         try:
             set_status("running")
-            # ✅ Update rate limiter delay from config
             from modules.rate_limiter import rate_limiter
             rate_limiter.delay = delay
-
             start_scan(target, user_id=user_id, config=config, threads=threads)
             save_scan_history(user_id=user_id)
             set_status("completed")
@@ -639,7 +655,7 @@ def start_configured_scan():
 
 
 @app.route("/report")
-@login_required 
+@login_required
 def report():
     return render_template("scan_report.html", vulnerabilities=vulnerabilities)
 
@@ -648,12 +664,12 @@ def report():
 @login_required
 def history():
     from auth.database import get_scans_for_user
-    scans = get_scans_for_user(current_user.id)  # ✅ only this user's scans
+    scans = get_scans_for_user(current_user.id)
     return render_template("history.html", scans=scans)
 
 
 @app.route("/download_report")
-@login_required 
+@login_required
 def download_report():
     score, label, color = get_risk_score()
     buffer = build_pdf(
@@ -672,7 +688,7 @@ def download_report():
 @login_required
 def download_history_report(scan_id):
     from auth.database import get_scan_by_id
-    scan = get_scan_by_id(scan_id, current_user.id)  # ✅ user can only access their own
+    scan = get_scan_by_id(scan_id, current_user.id)
 
     if not scan:
         return jsonify({"error": "Scan not found"}), 404
@@ -687,6 +703,7 @@ def download_history_report(scan_id):
     )
     filename = f"report_{scan['target'].replace('http://','').replace('https://','').replace('/','_')}.pdf"
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype="application/pdf")
+
 
 @app.route("/ai_report")
 @login_required
@@ -725,6 +742,38 @@ def hackerone_report(vuln_index):
     )
 
     return jsonify({"report": report})
+
+
+@app.route("/ai_chat", methods=["POST"])
+@login_required
+def ai_chat():
+    from modules.report_writer import call_ai
+
+    question = request.json.get("question", "")
+    context = request.json.get("context", "")
+
+    if not question:
+        return jsonify({"error": "No question provided"})
+
+    prompt = f"""You are an expert bug bounty hunter and penetration tester assistant.
+The user is using an AI Bug Bounty Scanner tool.
+
+Current scan context:
+{context}
+
+User question: {question}
+
+Answer concisely and technically. Include:
+- Direct answer
+- Relevant payloads if applicable
+- Tool commands if relevant
+- Fix suggestion if asked about defense
+
+Keep response under 300 words."""
+
+    response = call_ai(prompt, max_tokens=500)
+    return jsonify({"response": response})
+
 
 @app.route('/favicon.ico')
 def favicon():

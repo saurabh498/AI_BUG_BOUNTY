@@ -16,12 +16,14 @@ from core.validator import validate_target
 from modules.open_redirect import scan_open_redirect
 from modules.js_scanner import scan_js_endpoints
 from modules.auth_scanner import scan_default_credentials
+from modules.tech_detector import detect_tech_stack
 import sys
 
 
 def start_scan(target, user_id=None, config=None, threads=5):
 
     # ✅ Default config — all modules on
+    # ✅ FIXED: Removed extra leading space on "auth" key
     if config is None:
         config = {
             "headers":   True,
@@ -32,7 +34,7 @@ def start_scan(target, user_id=None, config=None, threads=5):
             "fuzzer":    True,
             "login":     True,
             "dirs":      True,
-             "auth":      True,   # ✅ NEW
+            "auth":      True,
         }
 
     print("\n🚀 AI Bug Bounty Scanner Starting\n")
@@ -66,6 +68,13 @@ def start_scan(target, user_id=None, config=None, threads=5):
     if not urls:
         print("[!] No URLs found, using target directly")
         urls = [target]
+
+    # ── TECH DETECTION ──
+    set_progress(18, "🔎 Detecting tech stack")
+    print("\n[2.7] Technology Detection")
+    tech_info = detect_tech_stack(target)
+    if tech_info["technologies"]:
+        print(f"[TECH] Stack: {', '.join(tech_info['technologies'])}")
 
     # ── 4️⃣ JS ENDPOINT DISCOVERY ──
     set_progress(20, "⚡ Discovering JS endpoints")
@@ -130,15 +139,17 @@ def start_scan(target, user_id=None, config=None, threads=5):
         print("\n[11] Login Scan")
         run_multithreaded_scan(urls, scan_login, threads=threads // 2)
 
-     # ── DEFAULT CREDENTIALS ── ✅ NEW
+    # ── 1️⃣2️⃣ DEFAULT CREDENTIALS ──
+    # ✅ FIXED: Removed extra leading space on the comment line
     if config.get("auth"):
         set_progress(94, "🔑 Testing default credentials")
         print("\n[12] Default Credentials Scan")
-        run_multithreaded_scan(urls, scan_default_credentials, threads=3)    
+        run_multithreaded_scan(urls, scan_default_credentials, threads=3)
 
     # ── 1️⃣3️⃣ REPORT ──
     set_progress(97, "📄 Generating report")
-    print("\n[12] Generating Report...")
+    # ✅ FIXED: Was [12] — now correctly [13]
+    print("\n[13] Generating Report...")
     generate_report()
 
     set_progress(100, "✅ Scan completed")

