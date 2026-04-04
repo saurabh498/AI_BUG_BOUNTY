@@ -192,35 +192,51 @@ docker-compose down
 
 ---
 
+
 ## 📁 Project Structure
 ```
 AI_BUG_BOUNTY/
-├── ai/                     # AI payload generation
-│   └── payload_generator.py
-├── auth/                   # Authentication system
+├── ai/                     # AI payload generation & classification
+│   ├── ai_payloads.py
+│   ├── payload_generator.py
+│   └── vuln_classifier.py
+├── auth/                   # Authentication & User DB system
 │   ├── database.py
 │   └── models.py
-├── core/                   # Core scanning engine
+├── core/                   # Core multithreaded engine
 │   ├── crawler.py
+│   ├── engine.py
+│   ├── http_client.py
 │   ├── intelligence.py
+│   ├── mutation_engine.py
+│   ├── param_discovery.py
+│   ├── payloads.py
 │   ├── report.py
 │   ├── storage.py
-│   ├── validator.py
-│   └── ...
-├── modules/                # Vulnerability scanners
-│   ├── sqli_scanner.py
-│   ├── xss_scanner.py
+│   ├── thread_engine.py
+│   └── validator.py
+├── modules/                # Specialized Vulnerability Scanners
+│   ├── ai_reasoning.py
+│   ├── attack_path.py      # New! Attack Chain mapping
+│   ├── auth_scanner.py
+│   ├── dir_scanner.py
+│   ├── exploit_suggester.py
+│   ├── fuzzer.py
 │   ├── header_scanner.py
-│   ├── sensitive_scanner.py
 │   ├── js_scanner.py
+│   ├── login_scanner.py
+│   ├── open_redirect.py
 │   ├── poc_generator.py
+│   ├── rate_limiter.py     # New! Smart throttling
 │   ├── report_writer.py
-│   └── ...
-├── recon/                  # Reconnaissance
+│   ├── sensitive_scanner.py
+│   ├── tech_detector.py    # New! Stack profiling
+│   └── xss_scanner.py
+├── recon/                  # Reconnaissance tools
 │   └── subdomain_enum.py
-├── templates/              # HTML templates
-├── dashboard.py            # Main Flask app
-├── main.py                 # Scan engine
+├── templates/              # Beautiful UI / HTML templates
+├── dashboard.py            # Main Flask Routing App
+├── main.py                 # CLI/Core Scan Trigger
 ├── requirements.txt
 ├── Dockerfile
 └── docker-compose.yml
